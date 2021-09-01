@@ -1,72 +1,51 @@
-var newYorkCoords = [40.73, -74.0059];
-var mapZoomLevel = 12;
+function createMap(earthquakes) {
 
-// Create the createMap function
-var myMap = L.map("map-id", {
-  center: newYorkCoords,
-  zoom: mapZoomLevel,
-});
-
-// Create the tile layer that will be the background of our map
-// Adding tile layer
-L.tileLayer(
-  "https://api.mapbox.com/styles/v1/{id}/tiles/{z}/{x}/{y}?access_token={accessToken}",
-  {
-    attribution:
-      "© <a href='https://www.mapbox.com/about/maps/'>Mapbox</a> © <a href='http://www.openstreetmap.org/copyright'>OpenStreetMap</a> <strong><a href='https://www.mapbox.com/map-feedback/' target='_blank'>Improve this map</a></strong>",
-    tileSize: 512,
+  // Create the tile layer that will be the background of our map
+  var lightmap = L.tileLayer("https://api.mapbox.com/styles/v1/mapbox/{id}/tiles/{z}/{x}/{y}?access_token={accessToken}", {
+    attribution: "Map data &copy; <a href=\"https://www.openstreetmap.org/\">OpenStreetMap</a> contributors, <a href=\"https://creativecommons.org/licenses/by-sa/2.0/\">CC-BY-SA</a>, Imagery © <a href=\"https://www.mapbox.com/\">Mapbox</a>",
     maxZoom: 18,
-    zoomOffset: -1,
-    id: "mapbox/streets-v11",
-    accessToken: API_KEY,
-  }
-).addTo(myMap);
+    id: "light-v10",
+    accessToken: API_KEY
+  });
 
-var queryUrl = "https://gbfs.citibikenyc.com/gbfs/en/station_information.json";
+  // Create a baseMaps object to hold the lightmap layer
+  var baseMaps = {
+    "Light Map": lightmap
+  };
 
-// Perform a GET request to the query URL
-d3.json(queryUrl).then(function (data) {
-  // Once we get a response, send the data.features object to the createFeatures function
-  createFeatures(data);
-});
+  // Create an overlayMaps object to hold the bikeStations layer
+  var overlayMaps = {
+    "Earthquakes": earthquakes
+  };
 
-function createFeatures(data) {
-  let numberStations = data.data.stations.length;
-  var stationData = [];
-  for (let i = 0; i < numberStations; i++) {
-    let rec = {
-      station_id: data.data.stations[i].station_id,
-      name: data.data.stations[i].name,
-      capacity: data.data.stations[i].capacity,
-      location:{
-      lat: data.data.stations[i].lat,
-      lon: data.data.stations[i].lon},
-    };
-    stationData.push(rec);
-  }
-  console.log(stationData);
+  // Create the map object with options
+  var map = L.map("map-id", {
+    center: [0, 0],
+    zoom: 1,
+    layers: [lightmap, earthquakes]
+  });
 
+  // Create a layer control, pass in the baseMaps and overlayMaps. Add the layer control to the map
+  L.control.layers(baseMaps, overlayMaps, {
+    collapsed: false
+  }).addTo(map);
 }
 
-// Create a baseMaps object to hold the lightmap layer
+function createMarkers(response) {
+  // TODO read the bbox to get the bounds for the map 
+  
+  let features = response.features;
+  let markers = [];
+  for (let i = 0; i < features.length; i++) {
+    let feature = features[i];
+    let marker = L.marker([feature.geometry.coordinates[1], feature.geometry.coordinates[0]])
+      // .bindPopup("<h3>" + station.name + "<h3><h3>Capacity: " + station.capacity + "</h3>");
+    markers.push(marker);
+  }
 
-// Create an overlayMaps object to hold the bikeStations layer
+  // Create a layer group made from the bike markers array, pass it into the createMap function
+  createMap(L.layerGroup(markers));
+}
 
-// Create the map object with options
-
-// Create a layer control, pass in the baseMaps and overlayMaps. Add the layer control to the map
-
-// Create the createMarkers function
-
-// Pull the "stations" property off of response.data
-
-// Initialize an array to hold bike markers
-
-// Loop through the stations array
-// For each station, create a marker and bind a popup with the station's name
-
-// Add the marker to the bikeMarkers array
-
-// Create a layer group made from the bike markers array, pass it into the createMap function
-
-// Perform an API call to the Citi Bike API to get station information. Call createMarkers when complete
+// Perform an API call to the USGS to get earthquake information. Call createMarkers when complete
+d3.json("https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/all_week.geojson").then(createMarkers);
