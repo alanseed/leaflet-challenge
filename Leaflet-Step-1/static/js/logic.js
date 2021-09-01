@@ -3,7 +3,7 @@ function createMap(earthquakes) {
   // Create the tile layer that will be the background of our map
   var lightmap = L.tileLayer("https://api.mapbox.com/styles/v1/mapbox/{id}/tiles/{z}/{x}/{y}?access_token={accessToken}", {
     attribution: "Map data &copy; <a href=\"https://www.openstreetmap.org/\">OpenStreetMap</a> contributors, <a href=\"https://creativecommons.org/licenses/by-sa/2.0/\">CC-BY-SA</a>, Imagery © <a href=\"https://www.mapbox.com/\">Mapbox</a>",
-    maxZoom: 18,
+    maxZoom: 10,
     id: "light-v10",
     accessToken: API_KEY
   });
@@ -15,13 +15,13 @@ function createMap(earthquakes) {
 
   // Create an overlayMaps object to hold the bikeStations layer
   var overlayMaps = {
-    "Earthquakes": earthquakes
+    "All earthquakes in past 30 days": earthquakes
   };
 
   // Create the map object with options
   var map = L.map("map-id", {
-    center: [0, 0],
-    zoom: 1,
+    center: [0, -145],
+    zoom: 3,
     layers: [lightmap, earthquakes]
   });
 
@@ -33,13 +33,21 @@ function createMap(earthquakes) {
 
 function createMarkers(response) {
   // TODO read the bbox to get the bounds for the map 
-  
+
   let features = response.features;
   let markers = [];
   for (let i = 0; i < features.length; i++) {
     let feature = features[i];
-    let marker = L.marker([feature.geometry.coordinates[1], feature.geometry.coordinates[0]])
-      // .bindPopup("<h3>" + station.name + "<h3><h3>Capacity: " + station.capacity + "</h3>");
+    let linMag = 1000 * Math.pow(10, feature.properties.mag / 2.0);
+
+    let marker = L.circle([feature.geometry.coordinates[1], feature.geometry.coordinates[0]], {
+      color: feature.geometry.coordinates[2],
+      fillColor: feature.geometry.coordinates[2],
+      fillOpacity: 0.5,
+      radius: linMag
+    }
+    )
+      .bindPopup("<h3>Magnitude: " + feature.properties.mag + "<h3>Depth: " + feature.geometry.coordinates[2] + " km</h3>");
     markers.push(marker);
   }
 
