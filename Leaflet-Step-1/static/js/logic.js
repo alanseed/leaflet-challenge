@@ -29,6 +29,17 @@ function createMap(earthquakes) {
   L.control.layers(baseMaps, overlayMaps, {
     collapsed: false
   }).addTo(map);
+
+  var legend =L.control({position:"bottomright"}); 
+  legend.onAdd = function(map){  
+  var div = L.DomUtil.create("div", "info legend");
+  var grades =[1,5,10,20,50,100,200] ;
+  for (var i = 0; i < grades.length; i++) {
+    div.innerHTML += '<i style=”background:' + getColor(grades[i] + 1) + '”></i>' + grades[i] + (grades[i + 1] ? '&ndash;' + grades[i + 1] + '<br>' : '+');
+    }
+    legend.addTo(map);
+    return div;
+  }
 }
 
 function createMarkers(response) {
@@ -39,10 +50,10 @@ function createMarkers(response) {
   for (let i = 0; i < features.length; i++) {
     let feature = features[i];
     let linMag = 1000 * Math.pow(10, feature.properties.mag / 2.0);
-
+    let col = getColor(feature.geometry.coordinates[2]);
     let marker = L.circle([feature.geometry.coordinates[1], feature.geometry.coordinates[0]], {
-      color: feature.geometry.coordinates[2],
-      fillColor: feature.geometry.coordinates[2],
+      color: col,
+      fillColor: col,
       fillOpacity: 0.5,
       radius: linMag
     }
@@ -53,6 +64,17 @@ function createMarkers(response) {
 
   // Create a layer group made from the bike markers array, pass it into the createMap function
   createMap(L.layerGroup(markers));
+}
+
+function getColor(d) {
+  return d > 200.0 ? "#7a0177" :
+    d > 100.0 ? "#BD0026" :
+      d > 50.0 ? "#E31A1C" :
+        d > 20.0 ? "#FC4E2A" :
+          d > 10.0 ? "#FD8D3C" :
+            d > 5.0 ? "#FEB24C’" :
+              d > 1.0 ? "#FED976" :
+                "#FFEDA0";
 }
 
 // Perform an API call to the USGS to get earthquake information. Call createMarkers when complete
