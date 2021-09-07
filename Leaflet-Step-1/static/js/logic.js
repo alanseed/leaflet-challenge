@@ -1,68 +1,77 @@
 function getColor(d) {
-  return d > 200.0 ? "#BD0000" :
-    d > 100.0 ? "#BD2F00" :
-      d > 50.0 ? "#E31A1C" :
-        d > 20.0 ? "#FC4E2A" :
-          d > 10.0 ? "#FD8D3C" :
-            d > 5.0 ? "#FEB24C" :
-              d > 1.0 ? "#FED976" :
-                "#FFEDA0";
+  return d > 100.0 ? "#E31A1C" :
+    d > 50.0 ? "#FC4E2A" :
+      d > 20.0 ? "#FD8D3C" :
+        d > 10.0 ? "#FEB24C" :
+          d > 5.0 ? "#FED976" :
+            "#FFEDA0";
 }
 
-var legend = L.control({ position: "bottomright" }) ;
+// Create the tile layer that will be the background of our map
+var lightmap = L.tileLayer("https://api.mapbox.com/styles/v1/mapbox/{id}/tiles/{z}/{x}/{y}?access_token={accessToken}", {
+  attribution: "Map data &copy; <a href=\"https://www.openstreetmap.org/\">OpenStreetMap</a> contributors, <a href=\"https://creativecommons.org/licenses/by-sa/2.0/\">CC-BY-SA</a>, Imagery © <a href=\"https://www.mapbox.com/\">Mapbox</a>",
+  maxZoom: 10,
+  id: "light-v10",
+  accessToken: API_KEY
+});
 
-legend.onAdd = function (map) {
-  var div = L.DomUtil.create("div", "info legend");
-  var heading = L.DomUtil.create("h3","heading", div);
-  heading.innerHTML += "Depth (km)" ;
-  var ulist = L.DomUtil.create("ul", "legend", div);
-  var grades = [1, 5, 10, 20, 50, 100, 200];
-  for (var i = 0; i < grades.length; i++) {
-    ulist.innerHTML += `<li style="background:` + getColor(grades[i] + 1) + `">` + grades[i] + (grades[i + 1] ? '&ndash;' + grades[i + 1] + '<br>' : '+</li>');
-  }
-  
-  console.log(div);
-  return div;
+var satmap = L.tileLayer("https://api.mapbox.com/styles/v1/mapbox/{id}/tiles/{z}/{x}/{y}?access_token={accessToken}", {
+  attribution: "Map data &copy; <a href=\"https://www.openstreetmap.org/\">OpenStreetMap</a> contributors, <a href=\"https://creativecommons.org/licenses/by-sa/2.0/\">CC-BY-SA</a>, Imagery © <a href=\"https://www.mapbox.com/\">Mapbox</a>",
+  maxZoom:10,
+  id: "satellite-v9",
+  accessToken: API_KEY
+});
+
+// Create a baseMaps object to hold the lightmap layer
+var baseMaps = {
+  "Light Map": lightmap,
+  "Sat Map": satmap
 };
 
-function createMap(earthquakes) {
+var earthquakes = new L.LayerGroup();
 
-  // Create the tile layer that will be the background of our map
-  var lightmap = L.tileLayer("https://api.mapbox.com/styles/v1/mapbox/{id}/tiles/{z}/{x}/{y}?access_token={accessToken}", {
-    attribution: "Map data &copy; <a href=\"https://www.openstreetmap.org/\">OpenStreetMap</a> contributors, <a href=\"https://creativecommons.org/licenses/by-sa/2.0/\">CC-BY-SA</a>, Imagery © <a href=\"https://www.mapbox.com/\">Mapbox</a>",
-    maxZoom: 10,
-    id: "light-v10",
-    accessToken: API_KEY
-  });
+// Create an overlayMaps object to hold the earthquakes layer
+var overlayMaps = {
+  "All earthquakes in past 30 days": earthquakes
+};
 
-  // Create a baseMaps object to hold the lightmap layer
-  var baseMaps = {
-    "Light Map": lightmap
-  };
+// Create the map object with options
+var map = L.map("map-id", {
+  center: [0, -145],
+  zoom: 3,
+  layers: [lightmap, earthquakes]
+});
 
-  // Create an overlayMaps object to hold the bikeStations layer
-  var overlayMaps = {
-    "All earthquakes in past 30 days": earthquakes
-  };
+// Create a layer control, pass in the baseMaps and overlayMaps. Add the layer control to the map
+L.control.layers(baseMaps, overlayMaps, {
+  collapsed: false
+}).addTo(map);
 
-  // Create the map object with options
-  var map = L.map("map-id", {
-    center: [0, -145],
-    zoom: 3,
-    layers: [lightmap, earthquakes]
-  });
+// set up the legend 
+var legend = [{
+  name: 'Earthquake Depth',
+  layer: earthquakes,
+  elements: [
+    { label: '0-5 km', html: "<dt style ='background:#FFEDA0;width:25px;height:25px'> </dt>" },
+    { label: '5-10 km', html: "<dt style ='background:#FED976;width:25px;height:25px'> </dt>" },
+    { label: '10-20 km', html: "<dt style ='background:#FEB24C;width:25px;height:25px'> </dt>" },
+    { label: '20-50 km', html: "<dt style ='background:#FD8D3C;width:25px;height:25px'> </dt>" },
+    { label: '50-100 km', html: "<dt style ='background:#FC4E2A;width:25px;height:25px'> </dt>" },
+    { label: '100 km +', html: "<dt style ='background:#E31A1C;width:25px;height:25px'> </dt>" }
+  ]
+} ];
+var htmlLegend = L.control.htmllegend({ 
+  position: "bottomright",
+  legends: legend,
+  defaultOpacity:0.8,
+  collapseSimple:true,
+  disableVisibilityControls:true
+});
+map.addControl(htmlLegend) ;
 
-  // Create a layer control, pass in the baseMaps and overlayMaps. Add the layer control to the map
-  L.control.layers(baseMaps, overlayMaps, {
-    collapsed: false
-  }).addTo(map);
-
-  legend.addTo(map);
-}
-
+// set up the markers 
 function createMarkers(response) {
   let features = response.features;
-  let markers = [];
   for (let i = 0; i < features.length; i++) {
     let feature = features[i];
     let linMag = 1000 * Math.pow(10, feature.properties.mag / 2.0);
@@ -75,9 +84,8 @@ function createMarkers(response) {
     }
     )
       .bindPopup("<h3>Magnitude: " + feature.properties.mag + "<h3>Depth: " + feature.geometry.coordinates[2] + " km</h3>");
-    markers.push(marker);
+    marker.addTo(earthquakes);
   }
-  createMap(L.layerGroup(markers));
 }
 
 // Perform an API call to the USGS to get earthquake information. Call createMarkers when complete
